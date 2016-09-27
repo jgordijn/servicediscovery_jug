@@ -6,7 +6,7 @@ import akka.stream.ActorMaterializer
 import http.Api
 
 object Main extends App {
-  implicit val system = ActorSystem("sherlock")
+  implicit val system = ActorSystem("servicediscovery_jug")
   implicit val materializer = ActorMaterializer()
 
   //val services = system.actorOf(Services.props, "services")
