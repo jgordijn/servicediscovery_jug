@@ -6,6 +6,7 @@ object Dependencies {
   
   object Compile {
     val akkaActor     = "com.typesafe.akka" %% "akka-actor"                         % akkaVersion
+    val akkaRemote    = "com.typesafe.akka" %% "akka-remote"                        % akkaVersion
     val akkaHttpCore  = "com.typesafe.akka" %% "akka-http-core"                     % akkaVersion
     val akkaHttp      = "com.typesafe.akka" %% "akka-http-experimental"             % akkaVersion
     val akkaSprayJson = "com.typesafe.akka" %% "akka-http-spray-json-experimental"  % akkaVersion
