@@ -1,12 +1,12 @@
 package nl.jgordijn.servicediscovery.jug
 
-import akka.actor.Actor
-import akka.cluster.ddata.DistributedData
+import akka.actor.{ Actor, ActorRef, ActorSystem }
+import akka.cluster.ddata._
 import akka.cluster.Cluster
-import akka.cluster.ddata.ORSetKey
-import akka.cluster.ddata.Replicator
-import akka.cluster.ddata.ORSet
-import akka.actor.ActorRef
+import akka.cluster.ddata.Replicator._
+import akka.util.Timeout
+
+import scala.concurrent.{ ExecutionContext, Future }
 
 object ServiceDiscoveryActor {
   case class Get(name: String)
@@ -15,6 +15,47 @@ object ServiceDiscoveryActor {
   case class Result(services: Set[Service])
   case object NoResult
   case object Updated
+}
+
+class ReplicatorInterface(system: ActorSystem) {
+  val replicator = DistributedData(system).replicator
+  implicit val node = Cluster(system)
+  import akka.pattern.ask
+
+  def get[A <: ReplicatedData](key: Key[A], consistency: ReadConsistency)(implicit timeout: Timeout, executionContext: ExecutionContext): Future[GetResponse[A]] = {
+    (replicator ? Replicator.Get(key, consistency)).mapTo[GetResponse[A]]
+  }
+  def update[A <: ReplicatedData](key: Key[A], initial: A, writeConsistency: WriteConsistency)(modify: A ⇒ A)(implicit timeout: Timeout, executionContext: ExecutionContext): Future[UpdateResponse[A]] = {
+    (replicator ? Replicator.Update(key, initial, writeConsistency)(modify)).mapTo[UpdateResponse[A]]
+  }
+}
+
+class ServiceDiscovery(system: ActorSystem) {
+  val replicatorInterface = new ReplicatorInterface(system)
+  implicit val node = Cluster(system)
+
+  val DataKey = ORSetKey[Service]("data")
+
+  def register(name: String, host: String, port: Int)(implicit timeout: Timeout, executionContext: ExecutionContext): Future[UpdateResponse[ORSet[Service]]] = replicatorInterface.update(DataKey, ORSet.empty[Service], Replicator.WriteLocal) { set ⇒
+    val service = Service(name, host, port)
+    if (set.contains(service)) set else set + service
+  }
+
+  def deregister(name: String, host: String, port: Int)(implicit timeout: Timeout, executionContext: ExecutionContext): Future[UpdateResponse[ORSet[Service]]] = replicatorInterface.update(DataKey, ORSet.empty[Service], Replicator.WriteLocal) { set ⇒
+    val service = Service(name, host, port)
+    if (!set.contains(service)) set else set - service
+  }
+
+  def get(name: String)(implicit timeout: Timeout, executionContext: ExecutionContext): Future[Set[Service]] = replicatorInterface.get(DataKey, Replicator.readLocal).map {
+    case g @ Replicator.GetSuccess(key, _) ⇒
+      val services = g.get(DataKey).elements.filter(_.name == name)
+      services
+    case g @ Replicator.NotFound(key, _) ⇒
+      Set.empty
+    case g @ Replicator.GetFailure(key, _) ⇒
+      // Can only happen when consistency level > local
+      Set.empty
+  }
 }
 
 class ServiceDiscoveryActor extends Actor {
@@ -48,7 +89,6 @@ class ServiceDiscoveryActor extends Actor {
     case Replicator.UpdateSuccess(key, Some(sndr: ActorRef)) ⇒
       sndr ! Updated
 
-    case x ⇒ println(s">>>>>>>> $x")
   }
 }
 

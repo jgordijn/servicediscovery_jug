@@ -13,7 +13,9 @@ object Main extends App {
 
   val services = system.actorOf(Props(new ServiceDiscoveryActor), "services")
 
-  val routes = new Api(services).route
+  val replicator = new ServiceDiscovery(system)
+
+  val routes = new Api(services, replicator).route
   val hostname = "localhost"
   val port = system.settings.config.getInt("port")
 
