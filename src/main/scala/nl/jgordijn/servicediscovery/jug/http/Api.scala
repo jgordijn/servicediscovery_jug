@@ -17,7 +17,7 @@ object Api {
   case class Registration(host: String, port: Int)
 }
 
-class Api(serviceDiscoveryActor: ActorRef, serviceDiscovery: ServiceDiscovery)(implicit executionContext: ExecutionContext) extends Serialization {
+class Api(serviceDiscoveryActor: ActorRef)(implicit executionContext: ExecutionContext) extends Serialization {
   import Api._
   implicit val timeout: Timeout = 3.seconds
   val DataKey = ORSetKey[Service]("data")
@@ -45,28 +45,5 @@ class Api(serviceDiscoveryActor: ActorRef, serviceDiscovery: ServiceDiscovery)(i
           }
         }
     }
-  } ~ pathPrefix("newservices") {
-    path(Segment) { name ⇒
-      get {
-        onSuccess(serviceDiscovery.get(name)) { services ⇒
-          complete(services)
-        }
-      } ~
-        post {
-          entity(as[Registration]) { r ⇒
-            onSuccess(serviceDiscovery.register(name, r.host, r.port)) { _ ⇒
-              complete(StatusCodes.NoContent)
-            }
-          }
-        } ~
-        delete {
-          entity(as[Registration]) { r ⇒
-            onSuccess(serviceDiscovery.deregister(name, r.host, r.port)) { _ ⇒
-              complete(StatusCodes.NoContent)
-            }
-          }
-        }
-    }
   }
-
 }
