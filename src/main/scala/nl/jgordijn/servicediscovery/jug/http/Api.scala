@@ -27,7 +27,6 @@ class Api(serviceDiscoveryActor: ActorRef)(implicit executionContext: ExecutionC
       get {
         onSuccess(serviceDiscoveryActor ? ServiceDiscoveryActor.Get(name)) {
           case ServiceDiscoveryActor.Result(s) ⇒ complete(s)
-          case ServiceDiscoveryActor.NoResult  ⇒ complete(StatusCodes.NotFound, "Unknown service")
         }
       } ~
         post {
