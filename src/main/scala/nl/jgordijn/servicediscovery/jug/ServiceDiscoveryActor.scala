@@ -13,24 +13,40 @@ object ServiceDiscoveryActor {
   case class Register(name: String, host: String, port: Int)
   case class Deregister(name: String, host: String, port: Int)
   case class Result(services: Set[Service])
-  case object NoResult
   case object Updated
 }
 
 class ServiceDiscoveryActor extends Actor {
   import ServiceDiscoveryActor._
 
-  var service = Set.empty[Service]
+  val replicator = DistributedData(context.system).replicator
+  implicit val node = Cluster(context.system)
+
+  val ServicesKey: ORSetKey[Service] = ORSetKey[Service]("services")
 
   def receive = {
     case Register(s, h, p) ⇒
-      service = service + Service(s, h, p)
-      sender() ! Updated
+      replicator ! Replicator.Update(ServicesKey, ORSet.empty[Service], Replicator.WriteLocal, Some(sender())) { set ⇒
+        set + Service(s, h, p)
+      }
     case Deregister(s, h, p) ⇒
-      service = service - Service(s, h, p)
-      sender() ! Updated
+      replicator ! Replicator.Update(ServicesKey, ORSet.empty[Service], Replicator.WriteLocal, Some(sender())) { set ⇒
+        set - Service(s, h, p)
+      }
+    case Replicator.UpdateSuccess(key, Some(sndr: ActorRef)) ⇒
+      sndr ! Updated
+    case e: Replicator.ModifyFailure[ORSet[Service]] =>
+      // happens when the update function throws an exception
+    case e: Replicator.UpdateTimeout[ORSet[Service]] =>
+      // happens when write consistence > local and nodes don't respond
+
     case Get(name) ⇒
-      sender() ! Result(service.filter(_.name == name))
+      replicator ! Replicator.Get(ServicesKey, Replicator.ReadLocal, Some((name, sender())))
+    case result @ Replicator.GetSuccess(key, Some((name, sndr: ActorRef))) ⇒
+      sndr ! Result(result.get(ServicesKey).elements.filter(_.name == name))
+    case Replicator.NotFound(_, Some((_, sndr: ActorRef))) ⇒
+      // Will only happen when no services are registered
+      sndr ! Result(Set.empty)
   }
 }
 
