@@ -1,4 +1,4 @@
-package nl.jgordijn.servicediscovery.jug
+package nl.jgordijn.servicediscovery
 package http
 
 import akka.actor.ActorRef
@@ -20,7 +20,6 @@ object Api {
 class Api(serviceDiscoveryActor: ActorRef)(implicit executionContext: ExecutionContext) extends Serialization {
   import Api._
   implicit val timeout: Timeout = 3.seconds
-  val DataKey = ORSetKey[Service]("data")
 
   val route: Route = pathPrefix("services") {
     path(Segment) { name ⇒
@@ -28,17 +27,11 @@ class Api(serviceDiscoveryActor: ActorRef)(implicit executionContext: ExecutionC
         onSuccess(serviceDiscoveryActor ? ServiceDiscoveryActor.Get(name)) {
           case ServiceDiscoveryActor.Result(s) ⇒ complete(s)
         }
+
       } ~
         post {
           entity(as[Registration]) { r ⇒
             onSuccess(serviceDiscoveryActor ? ServiceDiscoveryActor.Register(name, r.host, r.port)) { _ ⇒
-              complete(StatusCodes.NoContent)
-            }
-          }
-        } ~
-        delete {
-          entity(as[Registration]) { r ⇒
-            onSuccess(serviceDiscoveryActor ? ServiceDiscoveryActor.Deregister(name, r.host, r.port)) { _ ⇒
               complete(StatusCodes.NoContent)
             }
           }

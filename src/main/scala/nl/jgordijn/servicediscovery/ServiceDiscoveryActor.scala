@@ -1,4 +1,4 @@
-package nl.jgordijn.servicediscovery.jug
+package nl.jgordijn.servicediscovery
 
 import akka.actor.{ Actor, ActorRef, ActorSystem }
 import akka.cluster.ddata._
