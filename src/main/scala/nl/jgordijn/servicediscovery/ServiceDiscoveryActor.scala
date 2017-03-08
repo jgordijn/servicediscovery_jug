@@ -9,6 +9,8 @@ import akka.util.Timeout
 import scala.concurrent.{ ExecutionContext, Future }
 
 object ServiceDiscoveryActor {
+  case class Service(name: String, host: String, port: Int)
+
   case class Get(name: String)
   case class Register(name: String, host: String, port: Int)
   case class Deregister(name: String, host: String, port: Int)
