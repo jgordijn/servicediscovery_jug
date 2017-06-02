@@ -48,16 +48,16 @@ so we write to local only.
 Because of the asynchronous communication a message will be sent back to indicate whether the update was successful
 
 ```scala
-case Register(s, h, p) ⇒
-  replicator ! Replicator.Update(ServicesKey, ORSet.empty[Service], Replicator.WriteLocal, Some(sender())) { set ⇒
-    set + Service(s, h, p)
-  }
-case Replicator.UpdateSuccess(key, Some(sndr: ActorRef)) ⇒
-  sndr ! Updated
-case e: Replicator.ModifyFailure[ORSet[Service]] =>
-  // happens when the update function throws an exception
-case e: Replicator.UpdateTimeout[ORSet[Service]] =>
-  // happens when write consistence > local and nodes don't respond
+    case Register(s, h, p) ⇒
+      replicator ! Replicator.Update(ServicesKey, ORSet.empty[Service], Replicator.WriteLocal, Some(sender())) { set ⇒
+        set + Service(s, h, p)
+      }
+    case Replicator.UpdateSuccess(key, Some(sndr: ActorRef)) ⇒
+      sndr ! Updated
+    case Replicator.ModifyFailure(ServicesKey, errorMessage, throwable, requestContext) ⇒
+    // happens when the update function throws an exception
+    case Replicator.UpdateTimeout(ServicesKey, requestContext) ⇒
+    // happens when write consistence > local and nodes don't respond
 
 ```
 
