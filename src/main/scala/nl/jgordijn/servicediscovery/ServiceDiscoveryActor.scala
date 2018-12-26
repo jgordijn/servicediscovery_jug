@@ -1,14 +1,11 @@
 package nl.jgordijn.servicediscovery
 
-import akka.actor.{ Actor, ActorRef, ActorSystem }
-import akka.cluster.ddata._
+import akka.actor.{ Actor, ActorRef }
 import akka.cluster.Cluster
-import akka.cluster.ddata.Replicator._
-import akka.util.Timeout
-
-import scala.concurrent.{ ExecutionContext, Future }
+import akka.cluster.ddata._
 
 object ServiceDiscoveryActor {
+
   case class Service(name: String, host: String, port: Int)
 
   case class Get(name: String)
@@ -17,9 +14,11 @@ object ServiceDiscoveryActor {
   case class Result(services: Set[Service])
   case object NoResult
   case object Updated
+
 }
 
 class ServiceDiscoveryActor extends Actor {
+
   import ServiceDiscoveryActor._
 
   val replicator = DistributedData(context.system).replicator
@@ -44,9 +43,9 @@ class ServiceDiscoveryActor extends Actor {
       sndr ! Updated
     case Replicator.ModifyFailure(ServicesKey, errorMessage, throwable, requestContext) ⇒
     // happens when the update function throws an exception
-    case Replicator.UpdateTimeout(ServicesKey, requestContext)                          ⇒
+    case Replicator.UpdateTimeout(ServicesKey, requestContext) ⇒
     // happens when write consistence > local and nodes don't respond
-
   }
+
 }
 

@@ -8,8 +8,11 @@ import nl.jgordijn.servicediscovery.http.Api
 import scala.concurrent.ExecutionContext
 
 object Main extends App {
-  implicit val system = ActorSystem("servicediscovery")
+
+  implicit val system = ActorSystem("service-discovery")
+
   import system.dispatcher
+
   val hostname = "localhost"
   val port = system.settings.config.getInt("port")
 
@@ -20,5 +23,7 @@ object Main extends App {
 }
 
 class WebServer(services: ActorRef)(implicit executionContext: ExecutionContext) extends HttpApp {
-  override val route = new Api(services).route
+
+  override val routes = new Api(services).route
+
 }
